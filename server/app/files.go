@@ -8,12 +8,14 @@ import (
 	"strings"
 
 	"github.com/mattermost/focalboard/server/model"
-	mm_model "github.com/mattermost/mattermost-server/v6/model"
+	mm_model "github.com/mattermost/mattermost/server/public/model"
 
 	"github.com/mattermost/focalboard/server/utils"
-	"github.com/mattermost/mattermost-server/v6/shared/filestore"
-	"github.com/mattermost/mattermost-server/v6/shared/mlog"
+	"github.com/mattermost/mattermost/server/public/shared/mlog"
+	"github.com/mattermost/mattermost/server/v8/platform/shared/filestore"
 )
+
+const emptyString = "empty"
 
 var errEmptyFilename = errors.New("IsFileArchived: empty filename not allowed")
 var ErrFileNotFound = errors.New("file not found")
@@ -102,7 +104,7 @@ func (a *App) GetFilePath(teamID, rootID, fileName string) (*mm_model.FileInfo, 
 
 	var filePath string
 
-	if fileInfo != nil && fileInfo.Path != "" {
+	if fileInfo != nil && fileInfo.Path != "" && fileInfo.Path != emptyString {
 		filePath = fileInfo.Path
 	} else {
 		filePath = filepath.Join(teamID, rootID, fileName)

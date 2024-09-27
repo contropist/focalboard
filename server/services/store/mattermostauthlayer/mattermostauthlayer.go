@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"strings"
 
-	mmModel "github.com/mattermost/mattermost-server/v6/model"
+	mmModel "github.com/mattermost/mattermost/server/public/model"
 
 	sq "github.com/Masterminds/squirrel"
 
@@ -16,7 +16,7 @@ import (
 	"github.com/mattermost/focalboard/server/services/store"
 	"github.com/mattermost/focalboard/server/utils"
 
-	"github.com/mattermost/mattermost-server/v6/shared/mlog"
+	"github.com/mattermost/mattermost/server/public/shared/mlog"
 )
 
 var boardsBotID string
@@ -34,7 +34,6 @@ type servicesAPI interface {
 	GetUserByUsername(username string) (*mmModel.User, error)
 	GetLicense() *mmModel.License
 	GetFileInfo(fileID string) (*mmModel.FileInfo, error)
-	GetCloudLimits() (*mmModel.ProductLimits, error)
 	EnsureBot(bot *mmModel.Bot) (string, error)
 	CreatePost(post *mmModel.Post) (*mmModel.Post, error)
 	GetTeamMember(teamID string, userID string) (*mmModel.TeamMember, error)
@@ -93,6 +92,7 @@ func (s *MattermostAuthLayer) GetUserByID(userID string) (*model.User, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	user := mmUserToFbUser(mmuser)
 	return &user, nil
 }
@@ -586,7 +586,7 @@ func (s *MattermostAuthLayer) SaveFileInfo(fileInfo *mmModel.FileInfo) error {
 		s.logger.Error(
 			"failed to save fileinfo",
 			mlog.String("file_name", fileInfo.Name),
-			mlog.Int64("size", fileInfo.Size),
+			mlog.Int("size", fileInfo.Size),
 			mlog.Err(err),
 		)
 		return err
@@ -952,10 +952,6 @@ func (s *MattermostAuthLayer) boardsFromRows(rows *sql.Rows, removeDuplicates bo
 	return boards, nil
 }
 
-func (s *MattermostAuthLayer) GetCloudLimits() (*mmModel.ProductLimits, error) {
-	return s.servicesAPI.GetCloudLimits()
-}
-
 func (s *MattermostAuthLayer) implicitBoardMembershipsFromRows(rows *sql.Rows) ([]*model.BoardMember, error) {
 	boardMembers := []*model.BoardMember{}
 
@@ -1296,17 +1292,16 @@ func (s *MattermostAuthLayer) CanSeeUser(seerID string, seenID string) (bool, er
 
 	query := s.getQueryBuilder().
 		Select("1").
-		From(s.tablePrefix + "board_members AS BM1").
-		Join(s.tablePrefix + "board_members AS BM2 ON BM1.BoardID=BM2.BoardID").
-		LeftJoin("Bots b ON ( b.UserId = u.id )").
+		From(s.tablePrefix + "board_members AS bm1").
+		Join(s.tablePrefix + "board_members AS bm2 ON bm1.board_id=bm2.board_id").
 		Where(sq.Or{
 			sq.And{
-				sq.Eq{"BM1.UserID": seerID},
-				sq.Eq{"BM2.UserID": seenID},
+				sq.Eq{"bm1.user_id": seerID},
+				sq.Eq{"bm2.user_id": seenID},
 			},
 			sq.And{
-				sq.Eq{"BM1.UserID": seenID},
-				sq.Eq{"BM2.UserID": seerID},
+				sq.Eq{"bm1.user_id": seenID},
+				sq.Eq{"bm2.user_id": seerID},
 			},
 		}).Limit(1)
 
@@ -1322,17 +1317,16 @@ func (s *MattermostAuthLayer) CanSeeUser(seerID string, seenID string) (bool, er
 
 	query = s.getQueryBuilder().
 		Select("1").
-		From("ChannelMembers AS CM1").
-		Join("ChannelMembers AS CM2 ON CM1.BoardID=CM2.BoardID").
-		LeftJoin("Bots b ON ( b.UserId = u.id )").
+		From("channelmembers AS cm1").
+		Join("channelmembers AS cm2 ON cm1.channelid=cm2.channelid").
 		Where(sq.Or{
 			sq.And{
-				sq.Eq{"CM1.UserID": seerID},
-				sq.Eq{"CM2.UserID": seenID},
+				sq.Eq{"cm1.userid": seerID},
+				sq.Eq{"cm2.userid": seenID},
 			},
 			sq.And{
-				sq.Eq{"CM1.UserID": seenID},
-				sq.Eq{"CM2.UserID": seerID},
+				sq.Eq{"cm1.userid": seenID},
+				sq.Eq{"cm2.userid": seerID},
 			},
 		}).Limit(1)
 

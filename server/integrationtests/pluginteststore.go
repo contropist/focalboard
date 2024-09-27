@@ -9,7 +9,7 @@ import (
 	"github.com/mattermost/focalboard/server/model"
 	"github.com/mattermost/focalboard/server/services/store"
 
-	mmModel "github.com/mattermost/mattermost-server/v6/model"
+	mmModel "github.com/mattermost/mattermost/server/public/model"
 )
 
 var errTestStore = errors.New("plugin test store error")
@@ -125,6 +125,17 @@ func (s *PluginTestStore) GetUserByID(userID string) (*model.User, error) {
 		return nil, errTestStore
 	}
 	return user, nil
+}
+
+func (s *PluginTestStore) GetUsersList(userIDs []string, showEmail, showName bool) ([]*model.User, error) {
+	var users []*model.User
+	for _, id := range userIDs {
+		user := s.users[id]
+		if user != nil {
+			users = append(users, user)
+		}
+	}
+	return users, nil
 }
 
 func (s *PluginTestStore) GetUserByEmail(email string) (*model.User, error) {
